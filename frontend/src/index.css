@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&family=PT+Sans+Narrow:wght@400;700&display=swap');
+@import "tailwindcss";
+
+
+
+@theme {
+  --color-primary: #212121;
+  --color-secondary: #000000;
+  --color-maintext: #FFFFFF;
+  --color-secondarytext: #888888;
+  --color-highlight: #FF80AB;
+  --font-primary: "PT Sans Narrow", "sans-serif";
+  --font-secondary: "Kode Mono", "monospace";
+}
