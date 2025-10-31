@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
 import { createContext, useContext, useEffect, useState } from "react";
 
@@ -13,12 +13,26 @@ export const AuthProvider = ({children}) => {
     const [loading, setLoading] = useState(true);
     const googleProvider = new GoogleAuthProvider();
 
+    const registerUser = async (email, password) => {
+        return await createUserWithEmailAndPassword(auth, email, password);
+    };
+
+    const loginUser = async (email, password) => {
+        return await signInWithEmailAndPassword(auth, email, password);
+    };
+
     const signInWithGoogle = async () => {
         return await signInWithPopup(auth, googleProvider);
-    }
+    };
 
     const logoutUser = async () => {
         return await signOut(auth);
+    };
+
+    const setUpRecaptcha = (number) => {
+        const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {});
+        recaptchaVerifier.render();
+        return signInWithPhoneNumber(auth, number, recaptchaVerifier);
     }
 
     useEffect(() => {
@@ -40,11 +54,17 @@ export const AuthProvider = ({children}) => {
         return () => unsubscribe();
     }, [])
 
+
+
+
     const value = {
         currentUser,
         loading,
         signInWithGoogle,
-        logoutUser
+        registerUser,
+        loginUser,
+        logoutUser,
+        setUpRecaptcha
     }
 
     return (

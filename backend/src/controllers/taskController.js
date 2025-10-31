@@ -2,42 +2,58 @@ const taskModel = require("../models/taskModel");
 const userModel = require("../models/userModel");
 
 const createTask = async (req, res) => {
-    try {
-        const { uid, task } = req.body;
-        const startTime = new Date(req.body.startTime);
-        const duration = Number(req.body.duration);
-        if (!uid) return res.status(400).json({ success: false, message: "Uid not found..." });
-        if (!task || !startTime || !duration) return res.status(400).json({ success: false, message: "Task, time and duration is required..." });
-        if (isNaN(startTime.getTime())) return res.status(400).json({ success: false, message: "Improper date format..." });
-        startTime.setSeconds(0, 0);
-        if (duration <= 0) return res.status(400).json({ success: false, message: "Duration cannot be less than or equal to 0 minutes..." })
-        const endTime = new Date(startTime.getTime() + duration * 60000)
-        if (startTime < new Date()) return res.status(400).json({ success: false, message: "Scheduled date cannot be in the past..." })
-        const user = await userModel.findOne({ uid });
-        if (!user) return res.status(404).json({ success: false, message: "User not found..." });
-        const oldTask = await taskModel.findOne({
-            user: user._id,
-            startTime: { $lt: endTime },
-            endTime: { $gt: startTime }
-        });
-        if (oldTask) return res.status(400).json({ success: false, message: "You already have a task scheduled at the given time.", task: oldTask });
-        const newTask = await taskModel.create({
-            user: user._id,
-            task,
-            startTime,
-            endTime,
-            duration
-        });
-        return res.status(201).json({ success: true, message: "Task scheduled successfully.", task: newTask });
-    }
-    catch (err) {
-        return res.status(500).json({ success: false, message: "Server error...", error: err.message });
-    }
-}
+  try {
+    const { uid, task, startTime, duration } = req.body;
+    if (!uid || !task || !startTime || !duration)
+      return res.status(400).json({ success: false, message: "All fields are required." });
+
+    // Extract local date & time parts manually (so it’s not treated as UTC)
+    const [datePart, timePart] = startTime.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second = 0] = timePart.split(':').map(Number);
+
+    // ✅ Construct local time manually (no timezone conversion)
+    const localStartTime = new Date(year, month - 1, day, hour, minute, second);
+
+    if (isNaN(localStartTime.getTime()))
+      return res.status(400).json({ success: false, message: "Invalid date format." });
+
+    const localEndTime = new Date(localStartTime.getTime() + duration * 60000);
+
+    if (localStartTime < new Date())
+      return res.status(400).json({ success: false, message: "Start time cannot be in the past." });
+
+    const user = await userModel.findOne({ uid });
+    if (!user) return res.status(404).json({ success: false, message: "User not found." });
+
+    // Check for overlap
+    const overlap = await taskModel.findOne({
+      user: user._id,
+      startTime: { $lt: localEndTime },
+      endTime: { $gt: localStartTime }
+    });
+    if (overlap)
+      return res.status(400).json({ success: false, message: "Task overlaps with another.", task: overlap });
+
+    // ✅ Save exactly the same local time
+    const newTask = await taskModel.create({
+      user: user._id,
+      task,
+      startTime: localStartTime,
+      endTime: localEndTime,
+      duration,
+    });
+
+    return res.status(201).json({ success: true, message: "Task created successfully.", task: newTask });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Server error.", error: err.message });
+  }
+};
+
 
 const getAllTasks = async (req, res) => {
     try {
-        const { uid } = req.body;
+        const { uid } = req.query;
         if (!uid) return res.status(400).json({ success: false, message: "Uid not found..." });
         const user = await userModel.findOne({ uid });
         if (!user) return res.status(404).json({ success: false, message: "User not found..." });
@@ -52,7 +68,8 @@ const getAllTasks = async (req, res) => {
 
 const getTaskById = async (req, res) => {
     try {
-        const { taskId, uid } = req.body;
+        const { uid } = req.body;
+        const { taskId } = req.params;
         if (!taskId || !uid) return res.status(400).json({ success: false, message: "Task id and uid are required..." });
         const task = await taskModel.findById(taskId);
         if (!task) return res.status(404).json({ success: false, message: "No task found..." });
@@ -140,10 +157,11 @@ const findFreeSlots = async (req, res) => {
     try {
         const { uid, date } = req.query;
         if (!uid || !date) return res.status(400).json({ success: false, message: "Uid and date is required." });
-        if (isNaN(date.getTime())) return res.status(400).json({ success: false, message: "Invalid date format." });
-        const start = new Date(date);
+        const parsedDate = new Date(date);
+        if (isNaN(parsedDate.getTime())) return res.status(400).json({ success: false, message: "Invalid date format." });
+        const start = new Date(parsedDate);
         start.setHours(0, 0, 0, 0);
-        const end = new Date(date);
+        const end = new Date(parsedDate);
         end.setHours(23, 59, 59, 999);
         const user = await userModel.findOne({ uid });
         if (!user) return res.status(404).json({ success: false, message: "User not found." });
@@ -155,15 +173,15 @@ const findFreeSlots = async (req, res) => {
         if (tasks.length === 0) return res.status(200).json({
             success: true,
             message: "Empty slot fetched successfully.",
-            freeSlot: [{ start, end }]
+            freeSlots: [{ start, end }]
         })
         let freeSlots = [];
         let pointer = new Date(start);
-        tasks.map(task => {
+        tasks.forEach(task => {
             let taskStart = new Date(task.startTime);
             let taskEnd = new Date(task.endTime);
             if (taskStart > pointer) {
-                freeSlots.push({ start: new Date(pointer), end: new Date(taskStart) });
+                freeSlots.push({ start: new Date(pointer), end: new Date(taskStart)});
             }
             if (taskEnd > pointer) {
                 pointer = new Date(taskEnd);

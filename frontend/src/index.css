@@ -1,14 +1,47 @@
-@import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&family=PT+Sans+Narrow:wght@400;700&display=swap');
 @import "tailwindcss";
-
-
 
 @theme {
   --color-primary: #212121;
   --color-secondary: #000000;
-  --color-maintext: #FFFFFF;
+  --color-maintext: #ffffff;
   --color-secondarytext: #888888;
-  --color-highlight: #FF80AB;
-  --font-primary: "PT Sans Narrow", "sans-serif";
-  --font-secondary: "Kode Mono", "monospace";
+  --color-highlight: #ff80ab;
+
+  --font-primary: "PT Sans Narrow", sans-serif;
+  --font-secondary: "Kode Mono", monospace;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes rotate {
+    0%{
+      transform: rotate(0deg)
+    }
+    100%{
+      transform:rotate(360deg)
+    }
+  }
+
+  --animate-fadeIn: fadeIn 0.5s ease-in-out;
+  --animate-slideIn: slideIn 0.5s ease-in-out;
+  --animate-rotate: rotate 3s ease-in infinite;
 }
