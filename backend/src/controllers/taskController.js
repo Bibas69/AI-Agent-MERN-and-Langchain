@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const taskModel = require("../models/taskModel");
 const userModel = require("../models/userModel");
 
@@ -29,6 +30,7 @@ const createTask = async (req, res) => {
     // Check for overlap
     const overlap = await taskModel.findOne({
       user: user._id,
+      status: "incomplete",
       startTime: { $lt: localEndTime },
       endTime: { $gt: localStartTime }
     });
@@ -49,7 +51,6 @@ const createTask = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error.", error: err.message });
   }
 };
-
 
 const getAllTasks = async (req, res) => {
     try {
@@ -197,4 +198,28 @@ const findFreeSlots = async (req, res) => {
     }
 }
 
-module.exports = { createTask, getAllTasks, getTaskById, filterTasksOfSingleDate, filterTasksByDate, filterTasksByDuration, findFreeSlots };
+const updateTaskStatus = async (req, res) => {
+    try{
+        const {uid, taskStatus} = req.body;
+        const {taskId} = req.params;
+        if(!uid) return res.status(400).json({success:false, message: "Uid not found."});
+        if(!taskId) return res.status(400).json({success:false, message: "Task id id required."});
+        if(!taskStatus) return res.status(400).json({success:false, message: "Task status is required."});
+        const allowedTaskStatus = ["incomplete", "completed", "cancelled"];
+        if(!allowedTaskStatus.includes(taskStatus)) return res.status(400).json({success:false, message: "Invaid task status"});
+        const user = await userModel.findOne({uid});
+        if(!user) return res.status(400).json({success:false, message: "User not found."});
+        const task = await taskModel.findById(taskId);
+        if(user._id.equals(task.user)){
+            task.status = taskStatus;
+            await task.save();
+            return res.status(200).json({success:true, message:`Task ${taskStatus}`, task: task})
+        }
+        return res.status(403).json({success:false, message:"Unauthorized access..."})
+    }
+    catch(err){
+        return res.status(500).json({success:false, message:"Server error...", error: err.message})
+    }
+}
+
+module.exports = { createTask, getAllTasks, getTaskById, filterTasksOfSingleDate, filterTasksByDate, filterTasksByDuration, findFreeSlots, updateTaskStatus };

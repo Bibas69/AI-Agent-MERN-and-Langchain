@@ -21,6 +21,11 @@ const taskSchema = mongoose.Schema({
     duration: {
         type: Number,
         required: true
+    },
+    status: {
+        type: String,
+        enum: ["incomplete", "completed", "cancelled"],
+        default: "incomplete"
     }
 }, {timestamps: true})
 

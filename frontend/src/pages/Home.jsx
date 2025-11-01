@@ -9,7 +9,7 @@ import InProgressTask from '../components/InProgressTask'
 
 const Home = () => {
   return (
-    <div className='w-full h-full flex flex-col items-center justify-center gap-5 p-4 mt-10'>
+    <div className='w-full h-full flex flex-col items-center justify-center gap-5 p-4 mt-14'>
       <div className='w-full h-full flex items-center justify-center gap-20 p-4'>
         <div className='flex flex-col gap-6'>
           <AssistantPannel />
